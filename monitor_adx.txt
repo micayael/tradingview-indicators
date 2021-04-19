@@ -1,6 +1,19 @@
 //@version=4
 study(shorttitle = "Monitor+ADX", title="Squeeze Momentum Indicator+ADX", overlay=false)
 
+MOSTRAR = 0
+NO_MOSTRAR = 100
+
+//plotchar(_time, "hola", "", location = location.top)
+
+// :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+// MONITOR
+// :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+showADX  = input(true, 'Show ADX')
+showMonitor  = input(true, 'Show Monitor')
+showMonitor2  = input(true, 'Show Monitor 2')
+showSqueeze  = input(true, 'Show Squeeze')
 
 length = input(20, title="BB Length")
 mult = input(2.0,title="BB MultFactor")
@@ -29,14 +42,56 @@ noSqz  = (sqzOn == false) and (sqzOff == false)
 
 val = linreg(source  -  avg(avg(highest(high, lengthKC), lowest(low, lengthKC)),sma(close,lengthKC)), lengthKC,0)
 
-bcolor = iff( val > 0, iff( val > nz(val[1]), color.lime, color.green), iff( val < nz(val[1]), color.red, color.maroon))
+bcolor = iff( val > 0, iff( val > nz(val[1]), color.lime, color.teal), iff( val < nz(val[1]), color.red, color.maroon))
 
-scolor = noSqz ? color.blue : sqzOn ? color.black : color.silver
+scolor = noSqz ? color.blue : sqzOn ? color.black : color.white
 
-plot(val, color=bcolor, style=plot.style_area, linewidth=4)
-//plot(0, color=scolor, style=plot.style_cross, linewidth=2)
+monitorTransp = showMonitor ? MOSTRAR : NO_MOSTRAR
+monitoSqueezeTransp = showSqueeze ? MOSTRAR : NO_MOSTRAR
+
+plot(val, color=bcolor, style=plot.style_columns, linewidth=4, transp=monitorTransp)
+plot(0, color=scolor, style=plot.style_cross, linewidth=2, transp=monitoSqueezeTransp)
+
+// :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+// Monitor Diario
+// :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 
+lengthKC_2 = if timeframe.period == "60" //1h
+    20 * 4
+else
+    if timeframe.period == "240" //4h
+        20 * 6
+    else
+        if timeframe.period == "D"
+            20 * 7
+        else
+            if timeframe.period == "S"
+                20 * 52
+            else
+                20
+
+
+// Calculate KC
+ma_2 = sma(source, lengthKC_2)
+rangema_2 = sma(range, lengthKC_2)
+upperKC_2 = ma_2 + rangema_2 * multKC
+lowerKC_2 = ma_2 - rangema_2 * multKC
+
+sqzOn_2  = (lowerBB > lowerKC_2) and (upperBB < upperKC_2)
+sqzOff_2 = (lowerBB < lowerKC_2) and (upperBB > upperKC_2)
+
+val_2 = linreg(source  -  avg(avg(highest(high, lengthKC_2), lowest(low, lengthKC_2)),sma(close,lengthKC_2)), lengthKC_2, 0)
+
+bcolor_2 = iff( val_2 > 0, iff( val_2 > nz(val_2[1]), color.lime, color.teal), iff( val_2 < nz(val_2[1]), color.red, color.maroon))
+
+monitor2Transp = showMonitor2 ? MOSTRAR : NO_MOSTRAR
+
+plot(val_2, color=bcolor_2, style=plot.style_line, linewidth=4, transp=monitor2Transp)
+
+// :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+// ADX
+// :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 lensig = input(14, title="ADX")
 key = input(23, title="Key")
@@ -55,7 +110,7 @@ plus = fixnan(100 * rma(plusDM, dlen) / trur)
 minus = fixnan(100 * rma(minusDM, dlen) / trur)
 sum = plus + minus
 
-hline(dx, color=color.new(color.white, 0), title="KEY",linestyle=hline.style_dashed)
+hline(dx, color=color.new(color.silver, 0), title="KEY",linestyle=hline.style_solid)
 
 //plot(plus, color=#0094FF, title="+DI",transp=50,display=0)
 //plot(minus, color=#FF6A00, title="-DI",transp=50,display=0)
@@ -70,6 +125,9 @@ biggest(series) =>
 
 nl = biggest(val)
 adx = (100 * rma(abs(plus - minus) / (sum == 0 ? 1 : sum), lensig) - (key) ) * nl/scale +dx
-plot(adx, color=color.new(color.white, 0), title="ADX", linewidth=2)
+
+adxTransp = showADX ? MOSTRAR : NO_MOSTRAR
+
+plot(adx, color=color.white, title="ADX", linewidth=2, transp=adxTransp)
 
 
