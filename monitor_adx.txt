@@ -87,7 +87,7 @@ bcolor_2 = iff( val_2 > 0, iff( val_2 > nz(val_2[1]), color.lime, color.teal), i
 
 monitor2Transp = showMonitor2 ? MOSTRAR : NO_MOSTRAR
 
-plot(val_2, color=bcolor_2, style=plot.style_line, linewidth=4, transp=monitor2Transp)
+plot(val_2, color=bcolor_2, style=plot.style_line, linewidth=2, transp=monitor2Transp)
 
 // :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 // ADX
