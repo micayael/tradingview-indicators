@@ -3,8 +3,14 @@
 //@version=4
 study(title="micayael EMAs", shorttitle="micayael EMAs", overlay=true)
 
+MOSTRAR = 0
+NO_MOSTRAR = 100
+
+showSoloTradingLatino   = input(false, 'Show Only TradingLatino EMAs')
 showMMAR   = input(false, 'Show MMAR' )
 showMA20   = input(false, 'Show MA20' )
+
+emasNoTradingLatinoTransp = showSoloTradingLatino ? NO_MOSTRAR : MOSTRAR
 
 // EMAs
 EMA_7 = input(title='EMA_7',type=input.integer, defval=7, minval=1)
@@ -25,15 +31,16 @@ EMA200 = ema(close, EMA_200)
 EMA10 = ema(close, EMA_10)
 EMA55 = ema(close, EMA_55)
 
-//Exponencial
-plot(EMA7, title='EMA_7', display=display.all, color=color.blue, linewidth=1, transp=showMMAR ? 100 : 0)
-plot(EMA21, title='EMA_21', display=display.none, color=color.lime, linewidth=1, transp=showMMAR ? 100 : 0)
-plot(EMA30 ,title='EMA_30', display=display.all, color=color.fuchsia, linewidth=1, transp=showMMAR ? 100 : 0)
-plot(EMA50, title='EMA_50', display=display.all, color=color.orange, linewidth=1, transp=showMMAR ? 100 : 0)
-plot(EMA100, title='EMA_100', display=display.all, color=color.green, linewidth=1, transp=showMMAR ? 100 : 0)
-plot(EMA200, title='EMA_200', display=display.all, color=color.yellow, linewidth=1, transp=showMMAR ? 100 : 0)
-plot(EMA10, title='EMA_10', display=display.all, color=color.blue, linewidth=1, style=plot.style_circles, transp=showMMAR ? 100 : 0)
-plot(EMA55, title='EMA_55', display=display.all, color=color.orange, linewidth=1, style=plot.style_circles, transp=showMMAR ? 100 : 0)
+emasDefaultTransp = showSoloTradingLatino ? NO_MOSTRAR : MOSTRAR
+
+plot(EMA7, title='EMA_7', display=display.all, color=color.blue, linewidth=1, transp=emasDefaultTransp)
+plot(EMA21, title='EMA_21', display=display.none, color=color.lime, linewidth=1, transp=emasDefaultTransp)
+plot(EMA30 ,title='EMA_30', display=display.all, color=color.fuchsia, linewidth=1, transp=emasDefaultTransp)
+plot(EMA50, title='EMA_50', display=display.all, color=color.orange, linewidth=1, transp=emasDefaultTransp)
+plot(EMA100, title='EMA_100', display=display.all, color=color.green, linewidth=1, transp=emasDefaultTransp)
+plot(EMA200, title='EMA_200', display=display.all, color=color.yellow, linewidth=1, transp=emasDefaultTransp)
+plot(EMA10, title='EMA_10', display=display.all, color=color.blue, linewidth=1, style=plot.style_circles)
+plot(EMA55, title='EMA_55', display=display.all, color=color.orange, linewidth=1, style=plot.style_circles)
 
 
 
