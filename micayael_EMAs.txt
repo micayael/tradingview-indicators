@@ -3,14 +3,14 @@
 //@version=4
 study(title="micayael EMAs", shorttitle="micayael EMAs", overlay=true)
 
-MOSTRAR = 0
-NO_MOSTRAR = 100
+X = input(false, title="===== OPTIONS")
 
-showSoloTradingLatino   = input(false, 'Show Only TradingLatino EMAs')
-showMMAR   = input(false, 'Show MMAR' )
-showMA20   = input(false, 'Show MA20' )
+showSoloTradingLatino   = input(title='Show Only TradingLatino EMAs', type=input.bool, defval=true)
+showMMAR   = input(title='Show MMAR', type=input.bool, defval=false)
+showMA20   = input(title='Show MA20', type=input.bool, defval=false)
+showADXDirection   = input(title='Show ADX Direction', type=input.bool, defval=true)
 
-emasNoTradingLatinoTransp = showSoloTradingLatino ? NO_MOSTRAR : MOSTRAR
+X := input(false, title="===== EMAs")
 
 // EMAs
 EMA_7 = input(title='EMA_7',type=input.integer, defval=7, minval=1)
@@ -31,19 +31,41 @@ EMA200 = ema(close, EMA_200)
 EMA10 = ema(close, EMA_10)
 EMA55 = ema(close, EMA_55)
 
-emasDefaultTransp = showSoloTradingLatino ? NO_MOSTRAR : MOSTRAR
+emasDefaultTransp = showSoloTradingLatino ? 100 : 0
 
-plot(EMA7, title='EMA_7', display=display.all, color=color.blue, linewidth=1, transp=emasDefaultTransp)
-plot(EMA21, title='EMA_21', display=display.none, color=color.lime, linewidth=1, transp=emasDefaultTransp)
-plot(EMA30 ,title='EMA_30', display=display.all, color=color.fuchsia, linewidth=1, transp=emasDefaultTransp)
-plot(EMA50, title='EMA_50', display=display.all, color=color.orange, linewidth=1, transp=emasDefaultTransp)
-plot(EMA100, title='EMA_100', display=display.all, color=color.green, linewidth=1, transp=emasDefaultTransp)
-plot(EMA200, title='EMA_200', display=display.all, color=color.yellow, linewidth=1, transp=emasDefaultTransp)
-plot(EMA10, title='EMA_10', display=display.all, color=color.blue, linewidth=1, style=plot.style_circles)
-plot(EMA55, title='EMA_55', display=display.all, color=color.orange, linewidth=1, style=plot.style_circles)
+plot(EMA7, title='EMA_7', color=color.blue, linewidth=1, transp=emasDefaultTransp)
+plot(EMA21, title='EMA_21', color=color.lime, linewidth=1, display=display.none, transp=emasDefaultTransp)
+plot(EMA30 ,title='EMA_30', color=color.fuchsia, linewidth=1, transp=emasDefaultTransp)
+plot(EMA50, title='EMA_50', color=color.orange, linewidth=1, transp=emasDefaultTransp)
+plot(EMA100, title='EMA_100', color=color.green, linewidth=1, transp=emasDefaultTransp)
+plot(EMA200, title='EMA_200', color=color.yellow, linewidth=1, transp=emasDefaultTransp)
+plot(EMA10, title='EMA_10', color=color.blue, linewidth=1, style=plot.style_circles, trackprice=true, join=true)
+plot(EMA55, title='EMA_55', color=color.orange, linewidth=1, style=plot.style_circles, trackprice=true, join=true)
 
 
+////////////////////////////////////////////////////////////////////////////////
+// SHOW ADX DIRECTION
+////////////////////////////////////////////////////////////////////////////////
 
+X := input(false, title="===== ADX DIRECTION")
+
+adx_lensig = input(14, title="ADX Smoothing", minval=1, maxval=50)
+adx_len = input(14, minval=1, title="DI Length")
+adx_up = change(high)
+adx_down = -change(low)
+adx_plusDM = na(adx_up) ? na : (adx_up > adx_down and adx_up > 0 ? adx_up : 0)
+adx_minusDM = na(adx_down) ? na : (adx_down > adx_up and adx_down > 0 ? adx_down : 0)
+adx_trur = rma(tr, adx_len)
+adx_plus = fixnan(100 * rma(adx_plusDM, adx_len) / adx_trur)
+adx_minus = fixnan(100 * rma(adx_minusDM, adx_len) / adx_trur)
+adx_sum = adx_plus + adx_minus
+adx = 100 * rma(abs(adx_plus - adx_minus) / (adx_sum == 0 ? 1 : adx_sum), adx_lensig)
+
+plotshape(showADXDirection and adx[0] > 23 and (adx[0] < adx[1]), title="ADX disminuyendo", style=shape.circle, color=color.red, location=location.abovebar)
+plotshape(showADXDirection and adx[0] > 23 and (adx[0] > adx[1]), title="ADX aumentando", style=shape.circle, color=color.green, location=location.abovebar)
+
+plotshape(showADXDirection and adx[0] < 23 and (adx[0] < adx[1]), title="ADX disminuyendo", style=shape.circle, color=color.red, location=location.belowbar)
+plotshape(showADXDirection and adx[0] < 23 and (adx[0] > adx[1]), title="ADX aumentando", style=shape.circle, color=color.green, location=location.belowbar)
 
 ////////////////////////////////////////////////////////////////////////////////
 // EMA RIBBON
@@ -55,12 +77,6 @@ PI   = 104348/33215
 BULL = 1
 BEAR = -1
 NONE = 0
-
-// ╔══════════════════════════════════════╗
-// ║                                      ║
-// ║            Colors                    ║
-// ║                                      ║
-// ╚══════════════════════════════════════╝
 
 
 // v3 Style Gradient
@@ -98,15 +114,10 @@ VERDE3 = #7cb77e
 VERDE4 = #9fd2a5
 
 
-// ╔══════════════════════════════════════╗
-// ║                                      ║
-// ║            functions ()              ║
-// ║                                      ║
-// ╚══════════════════════════════════════╝
+////////////////////////////////////////////////////////////////////////////////
+// FUNCTIONS
+////////////////////////////////////////////////////////////////////////////////
 
-
-// ──────────[ Moving Average Color ]
-//  
 maColor(_ma, _maRef, _number) =>
     diffMA = change(_ma)
     if(_number==20)
@@ -124,21 +135,9 @@ maColor(_ma, _maRef, _number) =>
             
 
 
-// ╔══════════════════════════════════════════════════════════════════════════════╗
-// ║                                                                              ║
-// ║                                main ( )                                      ║
-// ║                                                                              ║
-// ╚══════════════════════════════════════════════════════════════════════════════╝
-
-
-// ────────────────────[ Input Parameters ]
-
-
-
-//plotchar(activarMMAR, "activarMMAR", "", location = location.top)
-
-
-// ────────────────────[ Processing ]
+////////////////////////////////////////////////////////////////////////////////
+// PROCESO PRINCIPAL
+////////////////////////////////////////////////////////////////////////////////
 
 src = close
 
@@ -188,6 +187,8 @@ plot( ma90, color=maColor(ma90,ma100,90), style=plot.style_line, title="MMA90", 
 ////////////////////////////////////////////////////////////////////////////////
 // Media movil de 20 periodos: CM_Ultimate_MA_MTF_V2
 ////////////////////////////////////////////////////////////////////////////////
+
+X := input(false, title="===== MEDIA MOVIL DE 20 PERIODOS: MA20")
 
 useCurrentRes = input(true, title="Use Current Chart Resolution?")
 resCustom = input(title="Use Different Timeframe? Uncheck Box Above", type=input.resolution, defval="D")
