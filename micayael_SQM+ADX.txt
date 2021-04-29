@@ -1,5 +1,5 @@
 //@version=4
-study(title = "micayael Monitor+ADX", shorttitle="SQM+ADX", overlay=false)
+study(title = "micayael SQM+ADX", shorttitle="SQM+ADX", overlay=false)
 
 MOSTRAR = 0
 NO_MOSTRAR = 100
@@ -108,7 +108,7 @@ plus = fixnan(100 * rma(plusDM, dlen) / trur)
 minus = fixnan(100 * rma(minusDM, dlen) / trur)
 sum = plus + minus
 
-hline(dx, color=color.new(color.silver, 0), title="KEY",linestyle=hline.style_solid)
+hline(dx, color=color.new(color.silver, 50), title="KEY",linestyle=hline.style_solid)
 
 //plot(plus, color=#0094FF, title="+DI",transp=50,display=0)
 //plot(minus, color=#FF6A00, title="-DI",transp=50,display=0)
@@ -126,5 +126,5 @@ adx = (100 * rma(abs(plus - minus) / (sum == 0 ? 1 : sum), lensig) - (key) ) * n
 
 adxTransp = showADX ? MOSTRAR : NO_MOSTRAR
 
-plot(adx, color=color.white, title="ADX", linewidth=2, transp=adxTransp)
+plot(adx, color=color.fuchsia, title="ADX", linewidth=2, transp=adxTransp)
 
