@@ -1,0 +1,63 @@
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © micayael
+
+//@version=4
+study(shorttitle = "MACD 4C", title = "4 colour MACD")
+
+showRSI = input(title="Show RSI", type = input.bool, defval = true)
+showMACD = input(title="Show MACD", type = input.bool, defval = true)
+
+
+////////////////////////////////////////////////////////////////////////////////
+// MACD 4
+////////////////////////////////////////////////////////////////////////////////
+
+fastMA = input(title="Fast moving average", type = input.integer, defval = 12, minval = 7)
+slowMA = input(title="Slow moving average", type = input.integer, defval = 26, minval = 7)
+lastColor = color.yellow
+[currMacd,_,_] = macd(close[0], fastMA, slowMA, 9)
+[prevMacd,_,_] = macd(close[1], fastMA, slowMA, 9)
+
+signalLength=input(9,minval=1)
+signal = sma(currMacd, signalLength)
+
+
+plotColor = currMacd > 0 ? currMacd > prevMacd ? color.lime : color.yellow : currMacd < prevMacd ? color.maroon : color.yellow
+plot(currMacd, style = plot.style_line, transp=0, color = plotColor, linewidth = 2)
+plot(0, title = "Zero line", linewidth = 1, color = color.gray, style=plot.style_circles)
+plot(signal, color=color.blue, transp=0, title="Signal", linewidth = 2)
+
+////////////////////////////////////////////////////////////////////////////////
+// MACD 4 SUPERIOR
+////////////////////////////////////////////////////////////////////////////////
+
+mutiplier = 20
+
+if timeframe.period == "15" //1h
+    mutiplier := 4
+else if timeframe.period == "60" //1h
+    mutiplier := 4
+else if timeframe.period == "240" //4h
+    mutiplier := 6
+else if timeframe.period == "D"
+    mutiplier := 7
+else if timeframe.period == "S"
+    mutiplier := 52
+
+fastMA2 = fastMA * mutiplier
+slowMA2 = slowMA * mutiplier
+signalLength2=signalLength * mutiplier
+
+
+lastColor2 = color.yellow
+[currMacd2,_,_] = macd(close[0], fastMA2, slowMA2, 9)
+[prevMacd2,_,_] = macd(close[1], fastMA2, slowMA2, 9)
+
+
+signal2 = sma(currMacd2, signalLength2)
+
+
+plotColor2 = currMacd2 > 0 ? currMacd2 > prevMacd2 ? color.lime : color.yellow : currMacd2 < prevMacd2 ? color.maroon : color.yellow
+plot(currMacd2, style = plot.style_line, transp=60, color = plotColor2, linewidth = 3)
+//plot(0, title = "Zero line", linewidth = 1, color = color.white)
+plot(signal2, color=color.blue, transp=60, title="Signal", linewidth = 3)

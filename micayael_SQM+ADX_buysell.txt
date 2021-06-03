@@ -1,27 +1,13 @@
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © micayael
+
 //@version=4
-study(title = "micayael SQM+ADX", shorttitle="SQM+ADX", overlay=false)
-
-MOSTRAR = 0
-NO_MOSTRAR = 100
-
-//plotchar(_time, "hola", "", location = location.top)
-
-// :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-// MONITOR
-// :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-
-X = input(false, title="===== OPTIONS")
-
-showADX  = input(true, 'Mostrar ADX')
-showMonitor  = input(true, 'Mostrar Monitor')
-showMonitor2  = input(true, 'Mostrar Monitor de temporalidad superior')
-showSqueeze  = input(true, 'Mostrar Squeeze')
+study("Prueba", overlay=false)
 
 length = input(20, title="BB Length")
 mult = input(2.0,title="BB MultFactor")
 lengthKC=input(20, title="KC Length")
 multKC = input(1.5, title="KC MultFactor")
-
 useTrueRange = input(true, title="Use TrueRange (KC)")
 
 // Calculate BB
@@ -48,50 +34,8 @@ bcolor = iff( val > 0, iff( val > nz(val[1]), color.lime, color.teal), iff( val 
 
 scolor = noSqz ? color.blue : sqzOn ? color.black : color.white
 
-monitorTransp = showMonitor ? MOSTRAR : NO_MOSTRAR
-monitoSqueezeTransp = showSqueeze ? MOSTRAR : NO_MOSTRAR
-
-plot(val, color=bcolor, style=plot.style_columns, linewidth=4, transp=monitorTransp)
-plot(0, color=scolor, style=plot.style_cross, linewidth=2, transp=monitoSqueezeTransp)
-
-// :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-// Monitor de temporalidad superior
-// :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-
-
-calculate_lengthKC_2() =>
-    lengthKC_2 = 20
-
-    if timeframe.period == "60" //1h
-        lengthKC_2 := 20 * 4
-    else if timeframe.period == "240" //4h
-        lengthKC_2 := 20 * 6
-    else if timeframe.period == "D"
-        lengthKC_2 := 20 * 7
-    else if timeframe.period == "S"
-        lengthKC_2 := 20 * 52
-    [lengthKC_2]
-
-[lengthKC_2] = calculate_lengthKC_2()
-
-// Calculate KC
-ma_2 = sma(source, lengthKC_2)
-rangema_2 = sma(range, lengthKC_2)
-upperKC_2 = ma_2 + rangema_2 * multKC
-lowerKC_2 = ma_2 - rangema_2 * multKC
-
-sqzOn_2  = (lowerBB > lowerKC_2) and (upperBB < upperKC_2)
-sqzOff_2 = (lowerBB < lowerKC_2) and (upperBB > upperKC_2)
-
-val_2 = linreg(source  -  avg(avg(highest(high, lengthKC_2), lowest(low, lengthKC_2)),sma(close,lengthKC_2)), lengthKC_2, 0)
-
-bcolor_2 = iff( val_2 > 0, iff( val_2 > nz(val_2[1]), color.lime, color.teal), iff( val_2 < nz(val_2[1]), color.red, color.maroon))
-
-plot(val_2, color=bcolor_2, style=plot.style_columns, linewidth=2, transp=80)
-
-// :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-// ADX
-// :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+plot(val, color=bcolor, style=plot.style_columns, linewidth=4)
+plot(0, color=scolor, style=plot.style_cross, linewidth=2)
 
 lensig = input(14, title="ADX")
 key = input(23, title="Key")
@@ -122,20 +66,10 @@ biggest(series) =>
 nl = biggest(val)
 adx = (100 * rma(abs(plus - minus) / (sum == 0 ? 1 : sum), lensig) - (key) ) * nl/scale +dx
 
-adxTransp = showADX ? MOSTRAR : NO_MOSTRAR
-
-plot(adx, color=color.fuchsia, title="ADX", linewidth=2, transp=adxTransp)
-
-// :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-// EMA 10/55
-// :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+plot(adx, color=color.fuchsia, title="ADX", linewidth=2)
 
 ema10 = ema(close, 10)
 ema55 = ema(close, 55)
-
-// :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-// BUY/SELL Signals
-// :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 adxAbove23 = adx[0] > key
 adxBelow23 = adx[0] < key
