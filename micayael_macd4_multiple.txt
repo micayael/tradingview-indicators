@@ -29,17 +29,26 @@ plot(signal, color=color.blue, transp=0, title="Signal", linewidth = 2)
 ////////////////////////////////////////////////////////////////////////////////
 
 mutiplier = 20
+active = false
 
-if timeframe.period == "15" //1h
+if timeframe.period == "1" //1m > 5m
+    mutiplier := 5
+    active := true
+else if timeframe.period == "5" //5m > 15m
+    mutiplier := 3
+    active := true
+else if timeframe.period == "15" //15m > 1h
     mutiplier := 4
-else if timeframe.period == "60" //1h
+    active := true
+else if timeframe.period == "60" //1h > 4h
     mutiplier := 4
-else if timeframe.period == "240" //4h
+    active := true
+else if timeframe.period == "240" //4h > D
     mutiplier := 6
-else if timeframe.period == "D"
+    active := true
+else if timeframe.period == "D" // D > S
     mutiplier := 7
-else if timeframe.period == "S"
-    mutiplier := 52
+    active := true
 
 fastMA2 = fastMA * mutiplier
 slowMA2 = slowMA * mutiplier
@@ -55,6 +64,6 @@ signal2 = sma(currMacd2, signalLength2)
 
 
 plotColor2 = currMacd2 > 0 ? currMacd2 > prevMacd2 ? color.lime : color.yellow : currMacd2 < prevMacd2 ? color.maroon : color.yellow
-plot(currMacd2, style = plot.style_line, transp=60, color = plotColor2, linewidth = 3)
+plot(currMacd2, style = plot.style_line, transp=70, color = plotColor2, linewidth = 3)
 //plot(0, title = "Zero line", linewidth = 1, color = color.white)
-plot(signal2, color=color.blue, transp=60, title="Signal", linewidth = 3)
+plot(signal2, color=color.blue, transp=70, title="Signal", linewidth = 3)
