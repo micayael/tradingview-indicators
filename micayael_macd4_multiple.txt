@@ -1,5 +1,5 @@
 //@version=4
-study(shorttitle = "MACD 4C", title = "4 colour MACD")
+study(title = "micayael MACD 4C multiple", shorttitle = "MACD 4Cx2")
 
 showRSI = input(title="Show RSI", type = input.bool, defval = true)
 showMACD = input(title="Show MACD", type = input.bool, defval = true)
@@ -64,6 +64,6 @@ signal2 = sma(currMacd2, signalLength2)
 
 
 plotColor2 = currMacd2 > 0 ? currMacd2 > prevMacd2 ? color.lime : color.yellow : currMacd2 < prevMacd2 ? color.maroon : color.yellow
-plot(currMacd2, style = plot.style_line, transp=70, color = plotColor2, linewidth = 3)
+plot(active ? currMacd2 : na , style = plot.style_line, transp=70, color = plotColor2, linewidth = 3)
 //plot(0, title = "Zero line", linewidth = 1, color = color.white)
-plot(signal2, color=color.blue, transp=70, title="Signal", linewidth = 3)
+plot(active  ? signal2 : na, color=color.blue, transp=70, title="Signal", linewidth = 3)
