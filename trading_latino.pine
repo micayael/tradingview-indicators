@@ -1,0 +1,235 @@
+//@version=4
+study(title = "Trading Latino", shorttitle="LVA", overlay=false)
+
+// :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+// MONITOR PRINCIPAL
+// :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+showMonitorPrincipal = input(title='Mostrar monitor de principal', type=input.bool, defval=true)
+showSqueeze = input(title='Mostrar Squeeze', type=input.bool, defval=true)
+
+length = input(20, title="BB Length")
+mult = input(2.0,title="BB MultFactor")
+lengthKC=input(20, title="KC Length")
+multKC = input(1.5, title="KC MultFactor")
+useTrueRange = input(true, title="Use TrueRange (KC)")
+
+// Calculate BB
+source = close
+basis = sma(source, length)
+dev = multKC * stdev(source, length)
+upperBB = basis + dev
+lowerBB = basis - dev
+
+// Calculate KC
+ma = sma(source, lengthKC)
+range = useTrueRange ? tr : (high - low)
+rangema = sma(range, lengthKC)
+upperKC = ma + rangema * multKC
+lowerKC = ma - rangema * multKC
+
+sqzOn  = (lowerBB > lowerKC) and (upperBB < upperKC)
+sqzOff = (lowerBB < lowerKC) and (upperBB > upperKC)
+noSqz  = (sqzOn == false) and (sqzOff == false)
+
+val = linreg(source  -  avg(avg(highest(high, lengthKC), lowest(low, lengthKC)),sma(close,lengthKC)), lengthKC,0)
+
+bcolor = iff( val > 0, iff( val > nz(val[1]), color.lime, color.teal), iff( val < nz(val[1]), color.red, color.maroon))
+
+scolor = noSqz ? color.blue : sqzOn ? color.black : color.white
+
+plot(showMonitorPrincipal ? val : na, title="Monitor Principal", color=bcolor, style=plot.style_columns, linewidth=4)
+plot(showSqueeze ? 0 : na, color=scolor, title="Squeeze", style=plot.style_cross, linewidth=2)
+
+// :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+// ADX
+// :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+showAdx = input(title='Mostrar ADX', type=input.bool, defval=true)
+
+lensig = input(14, title="ADX")
+key = input(23, title="Key")
+scale=input(defval=14,title="Scala")
+dx=input(defval=0,title="dx")
+up = rma(max(change(source), 0), lensig)
+down = rma(-min(change(source), 0), lensig)
+
+dlen = lensig 
+dup = change(high)
+ddown = -change(low)
+plusDM = na(up) ? na : (dup > ddown and dup > 0 ? dup : 0)
+minusDM = na(down) ? na : (ddown > dup and ddown > 0 ? ddown : 0)
+trur = rma(tr, dlen)
+plus = fixnan(100 * rma(plusDM, dlen) / trur)
+minus = fixnan(100 * rma(minusDM, dlen) / trur)
+sum = plus + minus
+
+hline(dx, color=color.new(color.silver, 50), title="dx",linestyle=hline.style_solid)
+
+biggest(series) =>
+    max = 0.0
+    max := nz(max[1], series)
+    if series > max
+        max := series
+    max
+
+nl = biggest(val)
+adx = (100 * rma(abs(plus - minus) / (sum == 0 ? 1 : sum), lensig) - (key) ) * nl/scale +dx
+
+plot(showAdx ? adx : na, title="ADX", color=#0000FF, linewidth=2)
+
+
+// :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+// MONITOR DE TEMPORALIDAD SUPERIOR
+// :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+showMonitorSuperior  = input(title='Mostrar monitor de temporalidad superior', type=input.bool, defval=true, tooltip="Temporalidades soportadas: 1m -> 5m/5m -> 15m/15m -> 1h/1h -> 4h/4h -> D/D -> S")
+
+monitor2activated = false
+mutiplier = 0
+
+if timeframe.period == "1" //1m > 5m
+    mutiplier := 5
+    monitor2activated := true
+else if timeframe.period == "5" //5m > 15m
+    mutiplier := 3
+    monitor2activated := true
+else if timeframe.period == "15" //15m > 1h
+    mutiplier := 4
+    monitor2activated := true
+else if timeframe.period == "60" //1h > 4h
+    mutiplier := 4
+    monitor2activated := true
+else if timeframe.period == "240" //4h > D
+    mutiplier := 6
+    monitor2activated := true
+else if timeframe.period == "D" // D > S
+    mutiplier := 7
+    monitor2activated := true
+
+lengthKC_2 = lengthKC * mutiplier
+
+// Calculate KC
+ma_2 = sma(source, lengthKC_2)
+rangema_2 = sma(range, lengthKC_2)
+upperKC_2 = ma_2 + rangema_2 * multKC
+lowerKC_2 = ma_2 - rangema_2 * multKC
+
+sqzOn_2  = (lowerBB > lowerKC_2) and (upperBB < upperKC_2)
+sqzOff_2 = (lowerBB < lowerKC_2) and (upperBB > upperKC_2)
+
+val_2 = linreg(source  -  avg(avg(highest(high, lengthKC_2), lowest(low, lengthKC_2)),sma(close,lengthKC_2)), lengthKC_2, 0)
+
+bcolor_2 = iff( val_2 > 0, iff( val_2 > nz(val_2[1]), color.lime, color.teal), iff( val_2 < nz(val_2[1]), color.red, color.maroon))
+
+plot(monitor2activated and showMonitorSuperior ? val_2 : na, title="Monitor de temporalidad superior", color=color.new(bcolor_2, 80), style=plot.style_columns, linewidth=2)
+
+// :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+// EMA 10/55
+// :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+ema10 = ema(close, 10)
+ema55 = ema(close, 55)
+
+
+ema10above55 = ema10 > ema55
+ema10below55 = ema10 < ema55
+
+// :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+// BUY/SELL Signals
+// :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+// ADX
+adxAbove23 = adx > key
+adxBelow23 = adx < key
+
+adxGoingDown = adx < adx[1]
+adxGoingUp = adx > adx[1]
+
+// Monitor principal
+//-------------------------------------------------------------------------------
+
+monitorBullish = bcolor == color.lime or bcolor == color.teal
+monitorBearish = bcolor == color.red or bcolor == color.maroon
+
+monitorBullishGoingUp = val >= val[1] and bcolor == color.lime
+monitorBullishGoingDown = val < val[1] and bcolor == color.teal
+
+monitorBearishGoingUp = val > val[1] and bcolor == color.maroon
+monitorBearishGoingDown = val < val[1] and bcolor == color.red
+
+// Monitor de temporalidad superior
+//-------------------------------------------------------------------------------
+
+monitor2BullishGoingUp = val_2 >= val_2[1] and bcolor_2 == color.lime
+monitor2BullishGoingDown = val_2 < val_2[1] and bcolor_2 == color.teal
+
+monitor2BearishGoingUp = val_2 > val_2[1] and bcolor_2 == color.maroon
+monitor2BearishGoingDown = val_2 < val_2[1] and bcolor_2 == color.red
+
+// Señal de Compra
+//-------------------------------------------------------------------------------
+
+isBuySignal() =>
+	// monitor rojo retrocediento y adx sin fuerza
+	buySignal1 = monitorBearishGoingUp and adxGoingDown
+
+	// escondo la señal si ya existe señal anterior para no repetirla
+	buySignal1Hidden = buySignal1
+
+	if(buySignal1 and buySignal1Hidden[1])
+	    buySignal1 := false
+
+	[buySignal1]
+
+[buySignal1] = isBuySignal()
+
+buySignal = buySignal1
+
+buyColor = buySignal and ema10above55 ? color.green :
+   buySignal and ema10below55 ? color.yellow : na
+
+plotshape(buySignal, title="Compra", style=shape.triangleup, color=buyColor, location=location.bottom)
+
+bgcolor_bullish = buySignal ? color.green : na
+
+bgcolor(color=color.new(bgcolor_bullish, 80), title="Señal de Compra")
+
+// Señal de Venta
+//-------------------------------------------------------------------------------
+
+isSellSignal() =>
+	// monitor verde retrocediento y adx sin fuerza
+	sellSignal1 = monitorBullishGoingDown and adxGoingDown
+
+	// monitor verde retrocediento y adx subiendo por debajo del punto 23
+	sellSignal2 = monitorBullishGoingDown and adxBelow23 and adxGoingUp
+
+	// escondo la señal si ya existe señal anterior para no repetirla
+	sellSignal1Hidden = sellSignal1
+
+	if(sellSignal1 and sellSignal1Hidden[1])
+	    sellSignal1 := false
+
+    sellSignal2Hidden = sellSignal2
+
+	if(sellSignal2 and sellSignal2Hidden[1])
+	    sellSignal2 := false
+
+	[sellSignal1, sellSignal2]
+
+[sellSignal1, sellSignal2] = isSellSignal()
+
+sellSignal = sellSignal1 or sellSignal2
+
+plotshape(sellSignal, title="Venta", style=shape.triangledown, color=color.red, location=location.top)
+
+bgcolor_berish = sellSignal ? color.red : na
+
+bgcolor(color=color.new(bgcolor_berish, 80), title="Señal de Venta")
+
+// ALERTAS
+// :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+alertcondition(buySignal, title="Señal de Compra", message="Señal de Compra detectada en {{ticker}}\nTemporalidad: {{interval}}")
+alertcondition(sellSignal, title="Señal de Venta", message="Señal de Venta detectada en {{ticker}}\nTemporalidad: {{interval}}")
