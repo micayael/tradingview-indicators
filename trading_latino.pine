@@ -233,3 +233,4 @@ bgcolor(color=color.new(bgcolor_berish, 80), title="Señal de Venta")
 
 alertcondition(buySignal, title="Señal de Compra", message="Señal de Compra detectada en {{ticker}}\nTemporalidad: {{interval}}")
 alertcondition(sellSignal, title="Señal de Venta", message="Señal de Venta detectada en {{ticker}}\nTemporalidad: {{interval}}")
+alertcondition(buySignal or sellSignal, title="Señal de Compra o Venta", message="Señal de Compra o Venta detectada en {{ticker}}\nTemporalidad: {{interval}}")
