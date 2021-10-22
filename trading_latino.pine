@@ -12,7 +12,8 @@ length = input(20, title="BB Length")
 mult = input(2.0,title="BB MultFactor")
 lengthKC=input(20, title="KC Length")
 multKC = input(1.5, title="KC MultFactor")
-useTrueRange = input(true, title="Use TrueRange (KC)")
+
+useTrueRange = input(true, title="Use TrueRange (KC)", type=input.bool)
 
 // Calculate BB
 source = close
@@ -32,13 +33,13 @@ sqzOn  = (lowerBB > lowerKC) and (upperBB < upperKC)
 sqzOff = (lowerBB < lowerKC) and (upperBB > upperKC)
 noSqz  = (sqzOn == false) and (sqzOff == false)
 
-val = linreg(source  -  avg(avg(highest(high, lengthKC), lowest(low, lengthKC)),sma(close,lengthKC)), lengthKC,0)
-
-bcolor = iff( val > 0, iff( val > nz(val[1]), color.lime, color.teal), iff( val < nz(val[1]), color.red, color.maroon))
-
 scolor = noSqz ? color.blue : sqzOn ? color.black : color.white
 
-plot(showMonitorPrincipal ? val : na, title="Monitor Principal", color=bcolor, style=plot.style_columns, linewidth=4)
+momentumVal = linreg(source  -  avg(avg(highest(high, lengthKC), lowest(low, lengthKC)),sma(close,lengthKC)), lengthKC,0)
+
+bcolor = iff( momentumVal > 0, iff( momentumVal > nz(momentumVal[1]), color.lime, color.teal), iff( momentumVal < nz(momentumVal[1]), color.red, color.maroon))
+
+plot(showMonitorPrincipal ? momentumVal : na, title="Monitor Principal", color=bcolor, style=plot.style_columns, linewidth=4)
 plot(showSqueeze ? 0 : na, color=scolor, title="Squeeze", style=plot.style_cross, linewidth=2)
 
 // :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -73,7 +74,7 @@ biggest(series) =>
         max := series
     max
 
-nl = biggest(val)
+nl = biggest(momentumVal)
 adx = (100 * rma(abs(plus - minus) / (sum == 0 ? 1 : sum), lensig) - (key) ) * nl/scale +dx
 
 plot(showAdx ? adx : na, title="ADX", color=#0000FF, linewidth=2)
@@ -85,27 +86,31 @@ plot(showAdx ? adx : na, title="ADX", color=#0000FF, linewidth=2)
 
 showMonitorSuperior  = input(title='Mostrar monitor de temporalidad superior', type=input.bool, defval=true, tooltip="Temporalidades soportadas: 1m -> 5m/5m -> 15m/15m -> 1h/1h -> 4h/4h -> D/D -> S")
 
-monitor2activated = false
-mutiplier = 0
+calcularTemporalidadSuperior() =>
+    temporalidadSoportada = false
+    mutiplier = 1
 
-if timeframe.period == "1" //1m > 5m
-    mutiplier := 5
-    monitor2activated := true
-else if timeframe.period == "5" //5m > 15m
-    mutiplier := 3
-    monitor2activated := true
-else if timeframe.period == "15" //15m > 1h
-    mutiplier := 4
-    monitor2activated := true
-else if timeframe.period == "60" //1h > 4h
-    mutiplier := 4
-    monitor2activated := true
-else if timeframe.period == "240" //4h > D
-    mutiplier := 6
-    monitor2activated := true
-else if timeframe.period == "D" // D > S
-    mutiplier := 7
-    monitor2activated := true
+    if timeframe.period == "1" //1m > 5m
+        mutiplier := 5
+        temporalidadSoportada := true
+    else if timeframe.period == "5" //5m > 15m
+        mutiplier := 3
+        temporalidadSoportada := true
+    else if timeframe.period == "15" //15m > 1h
+        mutiplier := 4
+        temporalidadSoportada := true
+    else if timeframe.period == "60" //1h > 4h
+        mutiplier := 4
+        temporalidadSoportada := true
+    else if timeframe.period == "240" //4h > D
+        mutiplier := 6
+        temporalidadSoportada := true
+    else if timeframe.period == "D" // D > S
+        mutiplier := 7
+        temporalidadSoportada := true
+    [mutiplier, temporalidadSoportada]
+
+[mutiplier, temporalidadSoportada] = calcularTemporalidadSuperior()
 
 lengthKC_2 = lengthKC * mutiplier
 
@@ -122,7 +127,7 @@ val_2 = linreg(source  -  avg(avg(highest(high, lengthKC_2), lowest(low, lengthK
 
 bcolor_2 = iff( val_2 > 0, iff( val_2 > nz(val_2[1]), color.lime, color.teal), iff( val_2 < nz(val_2[1]), color.red, color.maroon))
 
-plot(monitor2activated and showMonitorSuperior ? val_2 : na, title="Monitor de temporalidad superior", color=color.new(bcolor_2, 80), style=plot.style_columns, linewidth=2)
+plot(showMonitorSuperior and temporalidadSoportada ? val_2 : na, title="Monitor de temporalidad superior", color=color.new(bcolor_2, 80), style=plot.style_columns, linewidth=2)
 
 // :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 // EMA 10/55
@@ -130,7 +135,6 @@ plot(monitor2activated and showMonitorSuperior ? val_2 : na, title="Monitor de t
 
 ema10 = ema(close, 10)
 ema55 = ema(close, 55)
-
 
 ema10above55 = ema10 > ema55
 ema10below55 = ema10 < ema55
@@ -152,11 +156,11 @@ adxGoingUp = adx > adx[1]
 monitorBullish = bcolor == color.lime or bcolor == color.teal
 monitorBearish = bcolor == color.red or bcolor == color.maroon
 
-monitorBullishGoingUp = val >= val[1] and bcolor == color.lime
-monitorBullishGoingDown = val < val[1] and bcolor == color.teal
+monitorBullishGoingUp = momentumVal >= momentumVal[1] and bcolor == color.lime
+monitorBullishGoingDown = momentumVal < momentumVal[1] and bcolor == color.teal
 
-monitorBearishGoingUp = val > val[1] and bcolor == color.maroon
-monitorBearishGoingDown = val < val[1] and bcolor == color.red
+monitorBearishGoingUp = momentumVal > momentumVal[1] and bcolor == color.maroon
+monitorBearishGoingDown = momentumVal < momentumVal[1] and bcolor == color.red
 
 // Monitor de temporalidad superior
 //-------------------------------------------------------------------------------
@@ -171,16 +175,16 @@ monitor2BearishGoingDown = val_2 < val_2[1] and bcolor_2 == color.red
 //-------------------------------------------------------------------------------
 
 isBuySignal() =>
-	// monitor rojo retrocediento y adx sin fuerza
-	buySignal1 = monitorBearishGoingUp and adxGoingDown
+    // monitor rojo retrocediento y adx sin fuerza
+    buySignal1 = monitorBearishGoingUp and adxGoingDown
 
-	// escondo la señal si ya existe señal anterior para no repetirla
-	buySignal1Hidden = buySignal1
+    // escondo la señal si ya existe señal anterior para no repetirla
+    buySignal1Hidden = buySignal1
 
-	if(buySignal1 and buySignal1Hidden[1])
-	    buySignal1 := false
+    if(buySignal1 and buySignal1Hidden[1])
+        buySignal1 := false
 
-	[buySignal1]
+    [buySignal1]
 
 [buySignal1] = isBuySignal()
 
@@ -199,24 +203,24 @@ bgcolor(color=color.new(bgcolor_bullish, 80), title="Señal de Compra")
 //-------------------------------------------------------------------------------
 
 isSellSignal() =>
-	// monitor verde retrocediento y adx sin fuerza
-	sellSignal1 = monitorBullishGoingDown and adxGoingDown
+    // monitor verde retrocediento y adx sin fuerza
+    sellSignal1 = monitorBullishGoingDown and adxGoingDown
 
-	// monitor verde retrocediento y adx subiendo por debajo del punto 23
-	sellSignal2 = monitorBullishGoingDown and adxBelow23 and adxGoingUp
+    // monitor verde retrocediento y adx subiendo por debajo del punto 23
+    sellSignal2 = monitorBullishGoingDown and adxBelow23 and adxGoingUp
 
-	// escondo la señal si ya existe señal anterior para no repetirla
-	sellSignal1Hidden = sellSignal1
+    // escondo la señal si ya existe señal anterior para no repetirla
+    sellSignal1Hidden = sellSignal1
 
-	if(sellSignal1 and sellSignal1Hidden[1])
-	    sellSignal1 := false
+    if(sellSignal1 and sellSignal1Hidden[1])
+        sellSignal1 := false
 
     sellSignal2Hidden = sellSignal2
 
-	if(sellSignal2 and sellSignal2Hidden[1])
-	    sellSignal2 := false
+    if(sellSignal2 and sellSignal2Hidden[1])
+        sellSignal2 := false
 
-	[sellSignal1, sellSignal2]
+    [sellSignal1, sellSignal2]
 
 [sellSignal1, sellSignal2] = isSellSignal()
 
@@ -234,3 +238,246 @@ bgcolor(color=color.new(bgcolor_berish, 80), title="Señal de Venta")
 alertcondition(buySignal, title="Señal de Compra", message="Señal de Compra detectada en {{ticker}}\nTemporalidad: {{interval}}")
 alertcondition(sellSignal, title="Señal de Venta", message="Señal de Venta detectada en {{ticker}}\nTemporalidad: {{interval}}")
 alertcondition(buySignal or sellSignal, title="Señal de Compra o Venta", message="Señal de Compra o Venta detectada en {{ticker}}\nTemporalidad: {{interval}}")
+
+// :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+// ESTADO ESTRATÉGIA
+// :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+show_status = input(true, title = "------Show STATUS----------")
+dist= input(10,title="Distancia del monitor")
+dashColor = input(color.new(#696969, 90), "label Color", inline="Dash Line")
+dashTextColor = input(color.new(#ffffff, 0), "Text Color", inline="Dash Line")
+
+if(adx > adx[1] and adx > 23)
+    iadx='ADX con pendiente positiva por encima punto 23'
+if(adx > adx[1] and adx < 23)
+    iadx='ADX con pendiente positiva por debajo punto 23'
+if(adx < adx[1] and adx < 23)
+    iadx='ADX con pendiente negativa por debajo punto 23'
+if(adx < adx[1] and adx > 23)
+    iadx='ADX con pendiente negativa por encima punto 23'
+
+adxSobre23=adx >= 23
+adxDebajo23=adx < 23
+adxSubiendo=adx >= adx[1]
+adxBajando=adx < adx[1]
+
+monitorVerde = momentumVal >= 0
+monitorRojo = momentumVal < 0
+monitorSubiendo = momentumVal >= momentumVal[1]
+monitorBajando = momentumVal < momentumVal[1]
+
+iAdx = adxSobre23 and adxSubiendo ? 'Pendiente positiva ↑ 23' : adxSobre23 and adxBajando ? 'Pendiente negativa ↑ 23' :
+  adxDebajo23 and adxBajando ? 'Pendiente negativa ↓ 23' : adxDebajo23 and adxSubiendo ? 'Pendiente positiva ↓ 23' : '-'
+
+
+iMom = monitorVerde and monitorSubiendo ? 'Direccionalidad alcista' : monitorVerde and monitorBajando ? 'Direccionalidad bajista' :
+  monitorRojo and monitorBajando ? 'Direccionalidad bajista' : monitorRojo and monitorSubiendo ? 'Direccionalidad alcista' : '-'
+
+monitorColor = monitorVerde and monitorSubiendo ? color.lime : monitorVerde and monitorBajando ? color.teal :
+  monitorRojo and monitorBajando ? color.red : monitorRojo and monitorSubiendo ? color.maroon : na
+
+igral =
+// movimientos con fuerza
+ adxSobre23 and adxSubiendo and monitorVerde and monitorSubiendo ? 'Fuerte movimiento alcista' :
+ adxSobre23 and adxSubiendo and monitorVerde and monitorBajando ? 'Monitor muestra rango-caida\nel movimiento tiene fuerza':
+ adxSobre23 and adxSubiendo and monitorRojo and monitorBajando ? 'Fuerte movimiento bajista' :
+ adxSobre23 and adxSubiendo and monitorRojo and monitorSubiendo ? 'Monitor muestra rango-subida\nel movimiento tiene fuerza':
+
+ adxSobre23 and adxBajando and monitorVerde and monitorSubiendo ? 'Movimiento alcista sin fuerza' :
+ adxSobre23 and adxBajando and monitorVerde and monitorBajando ? 'Monitor muestra rango-caida\n pendiente negativa en ADX (venta)':
+ adxSobre23 and adxBajando and monitorRojo and monitorBajando ? 'Movimiento bajista sin fuerza' :
+ adxSobre23 and adxBajando and monitorRojo and monitorSubiendo ? 'Monitor muestra rango-subida con \npendiente negativa en ADX (compra)':
+
+// movimientos sin fuerza
+ adxDebajo23 and adxBajando and monitorVerde and monitorSubiendo ? 'Movimiento alcista sin fuerza' :
+ adxDebajo23 and adxBajando and monitorVerde and monitorBajando ? 'Monitor muestra rango-caida\nsin fuerza ':
+ adxDebajo23 and adxBajando and monitorRojo and monitorBajando ? 'Movimiento bajista sin fuerza' :
+ adxDebajo23 and adxBajando and monitorRojo and monitorSubiendo ? 'Monitor muestra rango-subida\nsin fuerza ':
+
+ adxDebajo23 and adxSubiendo and monitorVerde and monitorSubiendo ? 'Movimiento alcista que \n quiere agarrar fuerza' :
+ adxDebajo23 and adxSubiendo and monitorVerde and monitorBajando ? 'Monitor muestra rango-caida,\n el movimiento quiere agarrar fuerza':
+ adxDebajo23 and adxSubiendo and monitorRojo and monitorBajando ? 'Movimiento bajista que \n quiere agarrar fuerza' :
+ adxDebajo23 and adxSubiendo and monitorRojo and monitorSubiendo ? 'Monitor muestra rango-subida,\n el movimiento quiere agarrar fuerza': '-'
+
+
+var table info = table.new(position.bottom_right, 2, 3, border_width=1)
+
+table.cell(info, 0, 0, "ADX", bgcolor=color.new(monitorColor, 80), text_color=color.white, text_halign=text.align_left)
+table.cell(info, 0, 1, "MONITOR", bgcolor=color.new(monitorColor, 80), text_color=color.white, text_halign=text.align_left)
+table.cell(info, 0, 2, "MOV", bgcolor=color.new(monitorColor, 80), text_color=color.white, text_halign=text.align_left)
+
+//Datos
+table.cell(info, 1, 0, iAdx, bgcolor=color.new(monitorColor, 80), text_color=color.white, text_halign=text.align_left)
+table.cell(info, 1, 1, iMom, bgcolor=color.new(monitorColor, 80), text_color=color.white, text_halign=text.align_left)
+table.cell(info, 1, 2, igral, bgcolor=color.new(monitorColor, 80), text_color=color.white, text_halign=text.align_left)
+
+// :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+// DIVERGENCIAS
+// :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+show_div=input(true,title="------Divergencias--------")
+lbR = input(title="Pivot Lookback Right", defval=1)
+lbL = input(title="Pivot Lookback Left", defval=1)
+rangeUpper = input(title="Max of Lookback Range", defval=60)
+rangeLower = input(title="Min of Lookback Range", defval=1)
+plotBull = input(title="Plot Bullish", defval=true)
+plotHiddenBull = input(title="Plot Hidden Bullish", defval=true)
+plotBear = input(title="Plot Bearish", defval=true)
+plotHiddenBear = input(title="Plot Hidden Bearish", defval=true)
+plotlab= input(title="Plot label", defval=false)
+
+bearColor = #ff0000
+bullColor = #1bff00
+hiddenBullColor =  #a4ff99
+hiddenBearColor = #ff9e9e
+textColor = color.white
+noneColor = color.new(color.white, 100)
+
+//FUNCTIONS
+plFound(osc) => na(pivotlow(osc, lbL, lbR)) ? false : true
+phFound(osc) => na(pivothigh(osc, lbL, lbR)) ? false : true
+
+_inRange(cond) =>
+    bars = barssince(cond == true)
+    rangeLower <= bars and bars <= rangeUpper
+
+
+_findDivRB(osc)=>
+    // Osc: Higher Low
+    oscHL = osc[lbR] > valuewhen(plFound(osc), osc[lbR], 1) and _inRange(plFound(osc)[1])
+
+    // Price: Lower Low
+    priceLL = low[lbR] < valuewhen(plFound(osc), low[lbR], 1)
+
+    bullCond = plotBull and priceLL and oscHL and plFound(osc)
+
+
+    //------------------------------------------------------------------------------
+    // Hidden Bullish
+
+    // Osc: Lower Low
+    oscLL = osc[lbR] < valuewhen(plFound(osc), osc[lbR], 1) and _inRange(plFound(osc)[1])
+
+    // Price: Higher Low
+    priceHL = low[lbR] > valuewhen(plFound(osc), low[lbR], 1)
+
+    hiddenBullCond = plotHiddenBull and priceHL and oscLL and plFound(osc)
+
+
+
+    //------------------------------------------------------------------------------
+    // Regular Bearish
+
+    // Osc: Lower High
+    oscLH = osc[lbR] < valuewhen(phFound(osc), osc[lbR], 1) and _inRange(phFound(osc)[1])
+
+    // Price: Higher High
+    priceHH = high[lbR] > valuewhen(phFound(osc), high[lbR], 1)
+
+    bearCond = plotBear and priceHH and oscLH and phFound(osc)
+
+
+
+    //------------------------------------------------------------------------------
+    // Hidden Bearish
+
+    // Osc: Higher High
+    oscHH = osc[lbR] > valuewhen(phFound(osc), osc[lbR], 1) and _inRange(phFound(osc)[1])
+
+    // Price: Lower High
+    priceLH = high[lbR] < valuewhen(phFound(osc), high[lbR], 1)
+
+    hiddenBearCond = plotHiddenBear and priceLH and oscHH and phFound(osc)
+
+    [bullCond,hiddenBullCond,bearCond,hiddenBearCond]
+
+
+
+
+[sz_bullCond,sz_hiddenBullCond,sz_bearCond,sz_hiddenBearCond]=_findDivRB(momentumVal)
+
+
+// // Divergencia alcista
+
+plot(
+     plFound(momentumVal) and showMonitorPrincipal and show_div ? momentumVal[lbR] : na,
+     offset=-lbR,
+     title="Regular Bullish",
+     linewidth=2,
+     color=(sz_bullCond ? bullColor : noneColor)
+     )
+
+plotshape(
+         sz_bullCond and plotlab  and showMonitorPrincipal and show_div ? momentumVal[lbR] : na,
+         offset=-lbR,
+         title="Regular Bullish Label",
+         text="D",
+         style=shape.labelup,
+         location=location.absolute,
+         color=bullColor,
+         textcolor=color.black
+         )
+
+// // Divergencia alcista oculta
+
+// //plot(
+// //      plFound(momentumVal)  and showMonitorPrincipal and show_div ? momentumVal[lbR] : na,
+// //      offset=-lbR,
+// //      title="Hidden Bullish",
+// //      linewidth=1,
+// //      color=(sz_hiddenBullCond ? hiddenBullColor : noneColor)
+// //      )
+// //
+// //plotshape(
+// //         sz_hiddenBullCond and plotlab  and showMonitorPrincipal and show_div ? momentumVal[lbR] : na,
+// //         offset=-lbR,
+// //         title="Hidden Bullish Label",
+// //         text="H",
+// //         style=shape.labelup,
+// //         location=location.absolute,
+// //         color=bullColor,
+// //         textcolor=color.black
+// //         )
+
+// // Divergencia bajista
+
+plot(
+     phFound(momentumVal)  and showMonitorPrincipal and show_div ? momentumVal[lbR] : na,
+     offset=-lbR,
+     title="Regular Bearish",
+     linewidth=2,
+     color=(sz_bearCond ? bearColor : noneColor)
+     )
+
+plotshape(
+         sz_bearCond and plotlab  and showMonitorPrincipal and show_div ? momentumVal[lbR] : na,
+         offset=-lbR,
+         title="Regular Bearish Label",
+         text="D",
+         style=shape.labeldown,
+         location=location.absolute,
+         color=bearColor,
+         textcolor=textColor
+         )
+
+// // Divergencia bajista Oculta
+// //
+// //plot(
+// //     phFound(momentumVal)  and showMonitorPrincipal and show_div ? momentumVal[lbR] : na,
+// //     offset=-lbR,
+// //     title="Hidden Bearish",
+// //     linewidth=1,
+// //     color=(sz_hiddenBearCond ? hiddenBearColor : noneColor)
+// //     )
+// //
+// //plotshape(
+// //         sz_hiddenBearCond and plotlab  and showMonitorPrincipal and show_div ? momentumVal[lbR] : na,
+// //         offset=-lbR,
+// //         title="Hidden Bearish Label",
+// //         text="H",
+// //         style=shape.labeldown,
+// //         location=location.absolute,
+// //         color=bearColor,
+// //         textcolor=textColor
+// //         )
