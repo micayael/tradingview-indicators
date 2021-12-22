@@ -1,0 +1,164 @@
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © micayael
+
+//@version=4
+study(title="Armonía de los MACD", shorttitle="Armonía de los MACD")
+
+////////////////////////////////////////////////////////////////////////////////
+// INPUTS
+////////////////////////////////////////////////////////////////////////////////
+
+// Inputs para el MACD Principal
+// ----------------------------------------------------------------------------
+
+showMacd = input(title="Mostrar MACD Principal", type=input.bool, defval=true)
+
+fastMA = input(title="Media Móvil Rápida", type=input.integer, defval=21, minval=7)
+slowMA = input(title="Media Móvil Lenta", type=input.integer, defval=200, minval=7)
+signalMACD = input(title="Longitud de la Señal del MACD", type=input.integer, defval=9, minval=7)
+
+signalLength = input(title="Longitud de la Señal", defval=120, minval=1)
+
+// Inputs para el MACD de la temporalidad superior
+// ----------------------------------------------------------------------------
+
+showMacd2 = input(title="Mostrar MACD de Temporalidad Superior", type=input.bool, defval=true, tooltip="Solo para las temporalidades: 1m -> 5m/5m -> 15m/15m -> 1h/1h -> 4h/4h -> D/D -> S")
+
+fastMA2 = input(title="Media Móvil Rápida - MACD Superior", type=input.integer, defval=12, minval=7)
+slowMA2 = input(title="Media Móvil Lenta - MACD Superior", type=input.integer, defval=21, minval=7)
+signalMACD2 = input(title="Longitud de la Señal del MACD Superior", type=input.integer, defval=9, minval=7)
+
+signalLength2 = input(title="Longitud de la Señal - Temporalidad Superior", defval=60, minval=1)
+
+////////////////////////////////////////////////////////////////////////////////
+// MACD PRINCIPAL
+////////////////////////////////////////////////////////////////////////////////
+
+[currMacd,_,_] = macd(close[0], fastMA, slowMA, signalMACD)
+[prevMacd,_,_] = macd(close[1], fastMA, slowMA, signalMACD)
+
+signal = sma(currMacd, signalLength)
+
+macdColor = currMacd > signal ? color.lime : 
+   currMacd < signal ? color.red : color.yellow
+
+plot(0, title="Punto 0", linewidth=1, color=color.white, style=plot.style_line)
+
+plot(showMacd ? currMacd : na, title="MACD Principal", style=plot.style_line, color=macdColor, linewidth=2)
+plot(showMacd ? signal : na, title="Señal Principal", color=color.blue, linewidth=2)
+
+////////////////////////////////////////////////////////////////////////////////
+// MACD DE TEMPORALIDAD SUPERIOR
+////////////////////////////////////////////////////////////////////////////////
+
+calcularTemporalidadSuperior() =>
+    temporalidadSoportada = false
+    mutiplier = 0
+
+    if timeframe.period == "1" //1m > 5m
+        mutiplier := 5
+        temporalidadSoportada := true
+    else if timeframe.period == "5" //5m > 15m
+        mutiplier := 3
+        temporalidadSoportada := true
+    else if timeframe.period == "15" //15m > 1h
+        mutiplier := 4
+        temporalidadSoportada := true
+    else if timeframe.period == "60" //1h > 4h
+        mutiplier := 4
+        temporalidadSoportada := true
+    else if timeframe.period == "240" //4h > D
+        mutiplier := 6
+        temporalidadSoportada := true
+    else if timeframe.period == "D" // D > S
+        mutiplier := 7
+        temporalidadSoportada := true
+    [mutiplier, temporalidadSoportada]
+
+[mutiplier, temporalidadSoportada] = calcularTemporalidadSuperior()
+
+fastMA2 := fastMA2 * mutiplier
+slowMA2 := slowMA2 * mutiplier
+signalLength2 := signalLength2 * mutiplier
+
+[currMacd2,_,_] = macd(close[0], fastMA2, slowMA2, signalMACD2)
+[prevMacd2,_,_] = macd(close[1], fastMA2, slowMA2, signalMACD2)
+
+
+signal2 = sma(currMacd2, signalLength2)
+
+macd2Color = currMacd2 > signal2 ? color.lime : 
+   currMacd2 < signal2 ? color.red : color.yellow
+
+transparency = 50
+
+plot(showMacd2 and temporalidadSoportada ? currMacd2 : na, title="MACD Secundario", style=plot.style_circles, color=color.new(macd2Color, transparency), linewidth=2)
+plot(showMacd2 and temporalidadSoportada ? signal2 : na, title="Señal Secundaria", style=plot.style_circles, color=color.new(color.blue, transparency), linewidth=2)
+
+////////////////////////////////////////////////////////////////////////////////
+// ARMONIA - COLORES
+////////////////////////////////////////////////////////////////////////////////
+
+// ciclo alcista
+// ----------------------------------------------------------------------------
+
+macdBullish = currMacd > signal
+macd2Bullish = currMacd2 > signal2
+
+longAgresivo = not macdBullish[1] and macdBullish and signal < 0
+longConservador = not macdBullish[1] and macdBullish and signal > 0
+
+longAgresivoHidden = longAgresivo
+longConservadorHidden = longConservador
+
+if(longAgresivo and longAgresivoHidden[1])
+    longAgresivo := false
+
+if(longConservador and longConservadorHidden[1])
+    longConservador := false
+
+// ciclo bajista
+// ----------------------------------------------------------------------------
+
+macdBerish = currMacd < signal
+macd2Berish = currMacd2 < signal2
+
+shortAgresivo = not macdBerish[1] and macdBerish and signal > 0
+shortConservador = not macdBerish[1] and macdBerish and signal < 0
+
+shortAgresivoHidden = shortAgresivo
+shortConservadorHidden = shortConservador
+
+if(shortAgresivo and shortAgresivoHidden[1])
+    shortAgresivo := false
+
+if(shortConservador and shortConservadorHidden[1])
+    shortConservador := false
+
+// Señales
+// ----------------------------------------------------------------------------
+
+plotshape(longAgresivo, title="Long Agresivo", style=shape.labelup, color=color.green, location=location.bottom, text="Long+", textcolor=color.white)
+plotshape(longConservador, title="Long Conservador", style=shape.labelup, color=color.yellow, location=location.bottom, text="Long-", textcolor=color.black)
+
+plotshape(shortAgresivo, title="Short Agresivo", style=shape.labeldown, color=color.red, location=location.top, text="Short+", textcolor=color.white)
+plotshape(shortConservador, title="Short Conservador", style=shape.labeldown, color=color.yellow, location=location.top, text="Short-", textcolor=color.black)
+
+// colores de fondo para armonía entre los MACD
+
+bgcolorArmonia = macdBullish and macd2Bullish ? color.green : 
+   macdBerish and macd2Berish ? color.red : na
+
+bgcolor(color=color.new(bgcolorArmonia, 80), title="Sincronización del MACD")
+
+// Alertas
+// ----------------------------------------------------------------------------
+
+alertcondition(longAgresivo, title="Señal de Long Agresivo", message="Señal de Long Agresivo detectado en {{ticker}}\nTemporalidad: {{interval}}")
+alertcondition(longConservador, title="Señal de Long Conservador", message="Señal de Long Conservador detectado en {{ticker}}\nTemporalidad: {{interval}}")
+
+alertcondition(shortAgresivo, title="Señal de Short Agresivo", message="Señal de Short Agresivo detectado en {{ticker}}\nTemporalidad: {{interval}}")
+alertcondition(shortConservador, title="Señal de Short Conservador", message="Señal de Short Conservador detectado en {{ticker}}\nTemporalidad: {{interval}}")
+
+alertcondition(longAgresivo or longConservador, title="Señal de Long Agresivo o Conservador", message="Long Agresivo o Conservador detectado en {{ticker}}\nTemporalidad: {{interval}}")
+alertcondition(shortAgresivo or shortConservador, title="Señal de Short Agresivo o Conservador", message="Short Agresivo o Conservador detectado en {{ticker}}\nTemporalidad: {{interval}}")

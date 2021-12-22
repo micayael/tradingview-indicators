@@ -1,0 +1,253 @@
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © micayael
+
+//@version=4
+study(title="micayael EMAs", shorttitle="EMAs", overlay=true)
+
+////////////////////////////////////////////////////////////////////////////////
+// EMAs
+////////////////////////////////////////////////////////////////////////////////
+
+showTradingLatinoEMAs = input(title='Mostrar EMAs de TradingLatino', type=input.bool, defval=true)
+showCommonEMAs = input(title='Mostrar EMAs complementarias', type=input.bool, defval=false)
+
+// EMAs de TradingLatino
+// ----------------------------------------------------------------------------
+
+EMA_10 = input(title='EMA_10',type=input.integer, defval=10, minval=1)
+EMA_55 = input(title='EMA_55',type=input.integer, defval=55, minval=1)
+
+EMA10 = ema(close, EMA_10)
+EMA55 = ema(close, EMA_55)
+
+plot(showTradingLatinoEMAs ? EMA10 : na, title='EMA_10', color=color.blue, linewidth=1, style=plot.style_circles, trackprice=false, join=true)
+plot(showTradingLatinoEMAs ? EMA55 : na, title='EMA_55', color=color.orange, linewidth=1, style=plot.style_circles, trackprice=false, join=true)
+
+// EMAs Comunes
+// ----------------------------------------------------------------------------
+
+EMA_7 = input(title='EMA_7',type=input.integer, defval=7, minval=1)
+EMA_21 = input(title='EMA_21',type=input.integer, defval=21, minval=1)
+EMA_30 = input(title='EMA_30',type=input.integer, defval=30, minval=1)
+EMA_50 = input(title='EMA_50',type=input.integer, defval=50, minval=1)
+EMA_100 = input(title='EMA_100',type=input.integer, defval=100, minval=1)
+EMA_200 = input(title='EMA_200',type=input.integer, defval=200, minval=1)
+
+EMA7 = ema(close, EMA_7)
+EMA21 = ema(close, EMA_21)
+EMA30 = ema(close, EMA_30)
+EMA50 = ema(close, EMA_50)
+EMA100 = ema(close, EMA_100)
+EMA200 = ema(close, EMA_200)
+
+plot(showCommonEMAs ? EMA7 : na, title='EMA_7', color=color.blue, linewidth=1)
+plot(showCommonEMAs ? EMA21 : na, title='EMA_21', color=color.lime, linewidth=1, display=display.none)
+plot(showCommonEMAs ? EMA30 : na, title='EMA_30', color=color.fuchsia, linewidth=1)
+plot(showCommonEMAs ? EMA50 : na, title='EMA_50', color=color.orange, linewidth=1)
+plot(showCommonEMAs ? EMA100 : na, title='EMA_100', color=color.green, linewidth=1)
+plot(showCommonEMAs ? EMA200 : na, title='EMA_200', color=color.yellow, linewidth=1)
+
+////////////////////////////////////////////////////////////////////////////////
+// ADX DIRECTION
+////////////////////////////////////////////////////////////////////////////////
+
+showADXDirection = input(title='Mostrar fuerza del movimiento', type=input.bool, defval=false)
+
+adx_lensig = input(14, title="ADX Smoothing", minval=1, maxval=50)
+adx_len = input(14, minval=1, title="DI Length")
+adx_key = input(23, title="Key")
+adx_up = change(high)
+adx_down = -change(low)
+adx_plusDM = na(adx_up) ? na : (adx_up > adx_down and adx_up > 0 ? adx_up : 0)
+adx_minusDM = na(adx_down) ? na : (adx_down > adx_up and adx_down > 0 ? adx_down : 0)
+adx_trur = rma(tr, adx_len)
+adx_plus = fixnan(100 * rma(adx_plusDM, adx_len) / adx_trur)
+adx_minus = fixnan(100 * rma(adx_minusDM, adx_len) / adx_trur)
+adx_sum = adx_plus + adx_minus
+adx = 100 * rma(abs(adx_plus - adx_minus) / (adx_sum == 0 ? 1 : adx_sum), adx_lensig)
+
+adxAbove23 = adx > adx_key
+adxBelow23 = adx < adx_key
+
+adxPositivo = adx > adx[1]
+adxNegativo = adx < adx[1]
+
+adxAboveKeyPositivo = adxAbove23 and adxPositivo
+adxAboveKeyNegativo = adxAbove23 and adxNegativo
+
+adxBelowKeyPositivo = adxBelow23 and adxPositivo
+adxBelowKeyNegativo = adxBelow23 and adxNegativo
+
+// Se controla si ya fue mostrada la señal
+// ----------------------------------------------------------------------------
+
+adxAboveKeyPositivoHidden = adxAboveKeyPositivo
+adxAboveKeyNegativoHidden = adxAboveKeyNegativo
+adxBelowKeyPositivoHidden = adxBelowKeyPositivo
+adxBelowKeyNegativoHidden = adxBelowKeyNegativo
+
+if(adxAboveKeyPositivo and adxAboveKeyPositivoHidden[1])
+    adxAboveKeyPositivo := false
+
+if(adxAboveKeyNegativo and adxAboveKeyNegativoHidden[1])
+    adxAboveKeyNegativo := false
+
+if(adxBelowKeyPositivo and adxBelowKeyPositivoHidden[1])
+    adxBelowKeyPositivo := false
+
+if(adxBelowKeyNegativo and adxBelowKeyNegativoHidden[1])
+    adxBelowKeyNegativo := false
+
+// Se muestran las señales
+// ----------------------------------------------------------------------------
+
+plotshape(showADXDirection and adxAboveKeyPositivo, title="ADX aumentando", style=shape.triangleup, color=color.green, location=location.abovebar)
+plotshape(showADXDirection and adxAboveKeyNegativo, title="ADX disminuyendo", style=shape.triangledown, color=color.red, location=location.abovebar)
+
+plotshape(showADXDirection and adxBelowKeyPositivo, title="ADX aumentando", style=shape.triangleup, color=color.green, location=location.belowbar)
+plotshape(showADXDirection and adxBelowKeyNegativo, title="ADX disminuyendo", style=shape.triangledown, color=color.red, location=location.belowbar)
+
+////////////////////////////////////////////////////////////////////////////////
+// PULLBACK BITCOINERS LA
+////////////////////////////////////////////////////////////////////////////////
+
+showPullback = input(title='Mostrar pullback BitcoinersLA', type=input.bool, defval=false)
+
+// EMA RIBBON
+// ----------------------------------------------------------------------------
+
+PHI     = ( 1 + sqrt(5) ) / 2
+PI   = 104348/33215
+
+BULL = 1
+BEAR = -1
+NONE = 0
+
+// v3 Style Gradient
+GRN01 = #7CFC00, GRN02 = #32CD32, GRN03 = #228B22, GRN04 = #006400, GRN05 = #008000, GRN06=#093507
+RED01 = #FF4500, RED02 = #FF0000, RED03 = #B22222, RED04 = #8B0000, RED05 = #800000, RED06=#330d06
+
+// CONSTANTES DE COLORES
+// ----------------------------------------------------------------------------
+
+AMARILLO_CLARO = #fff59d
+NARANJA = #ff9900
+
+ROJO = #b9271a
+VERDE1 = #003d3c
+VERDE2 = #367935
+VERDE3 = #7cb77e
+VERDE4 = #9fd2a5
+
+// FUNCIÓN PARA COLORES
+// ----------------------------------------------------------------------------
+
+maColor(_ma, _maRef, _number) =>
+    diffMA = change(_ma)
+    if(_number==20)
+        macol = diffMA>=0 and _ma>_maRef ? AMARILLO_CLARO : diffMA<0 and _ma>_maRef ? color.maroon : diffMA<=0 and _ma<_maRef ? VERDE1 : diffMA>=0 and _ma<_maRef ? color.green : color.gray
+    else if(_number==50)
+        macol = diffMA>=0 and _ma>_maRef ? AMARILLO_CLARO : diffMA<0 and _ma>_maRef ? color.maroon : diffMA<=0 and _ma<_maRef ? VERDE1 : diffMA>=0 and _ma<_maRef ? color.green : color.gray
+    else if(_number==55)
+        macol = diffMA>=0 and _ma>_maRef ? NARANJA : diffMA<0 and _ma>_maRef ? color.maroon : diffMA<=0 and _ma<_maRef ? VERDE2 : diffMA>=0 and _ma<_maRef ? color.green : color.gray
+    else if(_number==60)
+        macol = diffMA>=0 and _ma>_maRef ? NARANJA : diffMA<0 and _ma>_maRef ? color.maroon : diffMA<=0 and _ma<_maRef ? VERDE3 : diffMA>=0 and _ma<_maRef ? color.green : color.gray
+    else if(_number==65)
+        macol = diffMA>=0 and _ma>_maRef ? color.red : diffMA<0 and _ma>_maRef ? color.maroon : diffMA<=0 and _ma<_maRef ? VERDE4 : diffMA>=0 and _ma<_maRef ? color.green : color.gray
+    else
+        macol = color.new(color.black, 100)
+            
+// CALCULO DE LAS MEDIAS MÓVILES
+// ----------------------------------------------------------------------------
+
+src = close
+
+ma05  = ema(src, 05)
+ma10  = ema(src, 10)
+ma15  = ema(src, 15)
+ma20  = ema(src, 20)
+ma25  = ema(src, 25)
+ma30  = ema(src, 30)
+ma35  = ema(src, 35)
+ma40  = ema(src, 40)
+ma45  = ema(src, 45)
+ma50  = ema(src, 50)
+ma55  = ema(src, 55)
+ma60  = ema(src, 60)
+ma65  = ema(src, 65)
+ma70  = ema(src, 70)
+ma75  = ema(src, 75)
+ma80  = ema(src, 80)
+ma85  = ema(src, 85)
+ma90  = ema(src, 90)
+ma100 = ema(src, 100)
+
+plot(showPullback ? ma20 : na, color=maColor(ma20 ,ma100 ,20), title="MMA20", linewidth=1, style=plot.style_line)
+plot(showPullback ? ma50 : na, color=maColor(ma50 ,ma100 ,50), title="MMA50", linewidth=1, style=plot.style_line)
+plot(showPullback ? ma55 : na, color=maColor(ma55 ,ma100 ,55), title="MMA55", linewidth=1, style=plot.style_circles)
+plot(showPullback ? ma60 : na, color=maColor(ma60 ,ma100 ,60), title="MMA60", linewidth=1, style=plot.style_line)
+plot(showPullback ? ma65 : na, color=maColor(ma65 ,ma100 ,65), title="MMA65", linewidth=1, style=plot.style_line)
+
+// :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+// MONITOR DE TEMPORALIDAD SUPERIOR
+// :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+useSqueeze = input(title='Usar Squeeze para calcular rangos', type=input.bool, defval=false, tooltip="Temporalidades soportadas: 1m -> 5m/5m -> 15m/15m -> 1h/1h -> 4h/4h -> D/D -> S")
+
+calcularTemporalidadSuperior() =>
+    temporalidadSoportada = false
+    mutiplier = 0
+
+    if timeframe.period == "1" //1m > 5m
+        mutiplier := 5
+        temporalidadSoportada := true
+    else if timeframe.period == "5" //5m > 15m
+        mutiplier := 3
+        temporalidadSoportada := true
+    else if timeframe.period == "15" //15m > 1h
+        mutiplier := 4
+        temporalidadSoportada := true
+    else if timeframe.period == "60" //1h > 4h
+        mutiplier := 4
+        temporalidadSoportada := true
+    else if timeframe.period == "240" //4h > D
+        mutiplier := 6
+        temporalidadSoportada := true
+    else if timeframe.period == "D" // D > S
+        mutiplier := 7
+        temporalidadSoportada := true
+    [mutiplier, temporalidadSoportada]
+
+[mutiplier, temporalidadSoportada] = calcularTemporalidadSuperior()
+
+length = input(20, title="BB Length")
+lengthKC=input(20, title="KC Length")
+multKC = input(1.5, title="KC MultFactor")
+
+useTrueRange = input(true, title="Use TrueRange (KC)", type=input.bool)
+
+//length := length * mutiplier
+//multKC := multKC * mutiplier
+//lengthKC := lengthKC * mutiplier
+
+// Calculate BB
+source = security(syminfo.tickerid,"D",close) 
+basis = sma(source, length)
+dev = multKC * stdev(source, length)
+upperBB = basis + dev
+lowerBB = basis - dev
+
+// Calculate KC
+ma = sma(source, lengthKC)
+range = useTrueRange ? tr : (high - low)
+rangema = sma(range, lengthKC)
+upperKC = ma + rangema * multKC
+lowerKC = ma - rangema * multKC
+
+sqzOn  = (lowerBB > lowerKC) and (upperBB < upperKC)
+sqzOff = (lowerBB < lowerKC) and (upperBB > upperKC)
+noSqz  = (sqzOn == false) and (sqzOff == false)
+
+scolor = noSqz ? color.blue : sqzOn ? color.black : color.white
+
+plot(useSqueeze ? 33800 : na, title="Squeeze", color=scolor, style=plot.style_cross, linewidth=2)
