@@ -108,8 +108,14 @@ calcularTemporalidadSuperior() =>
     else if timeframe.period == "240" //4h > D
         mutiplier := 6
         temporalidadSoportada := true
-    else if timeframe.period == "D" // D > S
+    else if timeframe.period == "D" // D > W
         mutiplier := 7
+        temporalidadSoportada := true
+    else if timeframe.period == "W" // W > 4W 
+        mutiplier := 4
+        temporalidadSoportada := true
+    else if timeframe.period == "M" // M > 12M
+        mutiplier := 12
         temporalidadSoportada := true
     [mutiplier, temporalidadSoportada]
 
