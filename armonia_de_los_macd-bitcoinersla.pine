@@ -1,0 +1,139 @@
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © micayael
+
+//@version=4
+study(title="Armonía de los MACD", shorttitle="Armonía de los MACD")
+
+////////////////////////////////////////////////////////////////////////////////
+// INPUTS
+////////////////////////////////////////////////////////////////////////////////
+
+//macd2Timeframe = input(title="Temporalidad MACD secundario", type=input.resolution, defval="0", tooltip="1m -> 5m/5m -> 15m/15m -> 1h/1h -> 4h/4h -> D/D -> S")
+
+fastMA = input(title="Fast moving average", type=input.integer, defval=12, minval=7)
+slowMA = input(title="Slow moving average", type=input.integer, defval=26, minval=7)
+
+signalLength = input(title="Signal Length", defval=9, minval=1)
+
+////////////////////////////////////////////////////////////////////////////////
+// MACD PRINCIPAL
+////////////////////////////////////////////////////////////////////////////////
+
+[currMacd,_,_] = macd(close[0], fastMA, slowMA, 9)
+[prevMacd,_,_] = macd(close[1], fastMA, slowMA, 9)
+
+signal = sma(currMacd, signalLength)
+
+macdColor = currMacd > 0 
+   ? currMacd > prevMacd ? color.lime : color.yellow 
+   : currMacd < prevMacd ? color.red : color.yellow
+
+plot(0, title="Punto 0", linewidth=1, color=color.white, style=plot.style_line)
+
+plot(currMacd, title="MACD Principal", style=plot.style_line, color=macdColor, linewidth=2)
+plot(signal, title="Señal Principal", color=color.blue, linewidth=2)
+
+////////////////////////////////////////////////////////////////////////////////
+// MACD SECUNDARIO
+////////////////////////////////////////////////////////////////////////////////
+
+mutiplier = 0
+macd2activated = false
+
+if timeframe.period == "1" //1m > 5m
+    mutiplier := 5
+    macd2activated := true
+else if timeframe.period == "5" //5m > 15m
+    mutiplier := 3
+    macd2activated := true
+else if timeframe.period == "15" //15m > 1h
+    mutiplier := 4
+    macd2activated := true
+else if timeframe.period == "60" //1h > 4h
+    mutiplier := 4
+    macd2activated := true
+else if timeframe.period == "240" //4h > D
+    mutiplier := 6
+    macd2activated := true
+else if timeframe.period == "D" // D > S
+    mutiplier := 7
+    macd2activated := true
+
+fastMA2 = fastMA * mutiplier
+slowMA2 = slowMA * mutiplier
+signalLength2 = signalLength * mutiplier
+
+[currMacd2,_,_] = macd(close[0], fastMA2, slowMA2, 9)
+[prevMacd2,_,_] = macd(close[1], fastMA2, slowMA2, 9)
+
+
+signal2 = sma(currMacd2, signalLength2)
+
+macd2Color = currMacd2 > 0 
+   ? currMacd2 > prevMacd2 ? color.lime : color.yellow 
+   : currMacd2 < prevMacd2 ? color.red : color.yellow
+
+transparency = 50
+
+plot(macd2activated ? currMacd2 : na, title="MACD Secundario", style=plot.style_circles, color=color.new(macd2Color, transparency), linewidth=1)
+plot(macd2activated  ? signal2 : na, title="Señal Secundaria", style=plot.style_circles, color=color.new(color.blue, transparency), linewidth=1)
+
+////////////////////////////////////////////////////////////////////////////////
+// ARMONIA - COLORES
+////////////////////////////////////////////////////////////////////////////////
+
+// ciclo alcista
+
+macdBullish = currMacd > 0
+signalBullish = signal > 0
+
+macd2Bullish = currMacd2 > 0
+signal2Bullish = signal2 > 0
+
+macdSignalBullish = macdBullish and signalBullish 
+macdSignal2Bullish = macd2Bullish and signal2 > signal2[1]
+
+// ciclo bajista
+
+macdBerish = currMacd < 0
+signalBerish = signal < 0
+
+macd2Berish = currMacd2 < 0
+signal2Berish = signal2 < 0
+
+macdSignalBerish = macdBerish and signalBerish 
+macdSignal2Berish = macd2Berish and signal2Berish
+
+// colores de fondo
+
+rsiSource = input(title="RSI Source", type=input.source, defval=close)
+rsiLength = input(title="RSI Length", type=input.integer, defval=14)
+rsiOverbought = input(title="RSI Overbought", type=input.integer, defval=80)
+rsiOverselling = input(title="RSI Overselling", type=input.integer, defval=20)
+rsiValue = rsi(rsiSource, rsiLength)
+
+bgcolor = rsiValue > rsiOverbought ? color.red : 
+   rsiValue < rsiOverselling ? color.green : na
+
+bgcolor(color=color.new(bgcolor, 80), title="Sobrecompra o sobreventa")
+
+// Alertas
+
+armoniaAlcistaDetectada = macdSignalBullish and macdSignal2Bullish
+armoniaAlcistaHidden = armoniaAlcistaDetectada
+
+if(armoniaAlcistaDetectada and armoniaAlcistaHidden[1])
+    armoniaAlcistaDetectada := false
+
+
+armoniaBajistaDetectada = macdSignalBerish and macdSignal2Berish
+armoniaBajistaHidden = armoniaBajistaDetectada
+
+if(armoniaBajistaDetectada and armoniaBajistaHidden[1])
+    armoniaBajistaDetectada := false
+
+plotshape(armoniaAlcistaDetectada, title="Inicio de armonía alcista detectada", style=shape.triangleup, color=color.green, location=location.bottom)
+plotshape(armoniaBajistaDetectada, title="Inicio de armonía bajista detectada", style=shape.triangledown, color=color.red, location=location.bottom)
+
+alertcondition(armoniaAlcistaDetectada, title="Señal de inicio de armonía alcista detectada", message="Armonía alcista detectada en {{ticker}}\nTemporalidad: {{interval}}")
+alertcondition(armoniaBajistaDetectada, title="Señal de inicio de armonía bajista detectada", message="Armonía bajista detectada en {{ticker}}\nTemporalidad: {{interval}}")
